@@ -1,12 +1,11 @@
-from groq import Groq
+import httpx
 from config import *
-
-client = Groq(api_key=GROQ_API_KEY)
 
 class AgenteAtendimento:
     def __init__(self):
         self.historico = []
         self.contexto_empresa = self._montar_contexto()
+        self.api_url = "https://api.groq.com/openai/v1/chat/completions"
 
     def _montar_contexto(self):
         produtos_listados = "\n".join([f"• {p}" for p in EMPRESA_PRODUTOS])
@@ -42,14 +41,28 @@ INSTRUÇÕES:
         ] + self.historico
 
         try:
-            resposta = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=mensagens,
-                temperature=0.7,
-                max_tokens=300
-            )
+            headers = {
+                "Authorization": f"Bearer {GROQ_API_KEY}",
+                "Content-Type": "application/json"
+            }
 
-            texto = resposta.choices[0].message.content
+            payload = {
+                "model": "llama-3.3-70b-versatile",
+                "messages": mensagens,
+                "temperature": 0.7,
+                "max_tokens": 300
+            }
+
+            with httpx.Client(timeout=30.0) as client:
+                response = client.post(
+                    self.api_url,
+                    headers=headers,
+                    json=payload
+                )
+
+                response.raise_for_status()
+                data = response.json()
+                texto = data["choices"][0]["message"]["content"]
 
             self.historico.append({
                 "role": "assistant",
@@ -58,6 +71,8 @@ INSTRUÇÕES:
 
             return texto
 
+        except httpx.HTTPStatusError as e:
+            return f"Erro na API Groq: {e.response.status_code} - {e.response.text}"
         except Exception as e:
             return f"Desculpe, tive um problema interno 😅 Erro: {str(e)}"
 
