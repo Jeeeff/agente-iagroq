@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo - Agente de Atendimento IA 🤖</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Agente de Atendimento com IA</h1>
+            <p>Demonstração do Plano Básico</p>
+            <button onclick="resetarConversa()" class="btn-reset">🔄 Nova Conversa</button>
+        </div>
+
+        <div class="chat-container" id="chatContainer">
+            <div class="mensagem agente">
+                <div class="avatar">🤖</div>
+                <div class="texto">
+                    Olá! 👋 Sou a assistente virtual da Boutique Goods!<br>
+                    Como posso te ajudar hoje? 😊
+                </div>
+            </div>
+        </div>
+
+        <div class="input-container">
+            <input 
+                type="text" 
+                id="inputMensagem" 
+                placeholder="Digite sua mensagem..."
+                onkeypress="handleKeyPress(event)"
+            >
+            <button onclick="enviarMensagem()" class="btn-enviar">Enviar 📤</button>
+        </div>
+
+        <div class="info-demo">
+            <p><strong>💡 Experimente perguntar:</strong></p>
+            <ul>
+                <li>"Quais produtos vocês têm?"</li>
+                <li>"Quanto custa uma vela aromática?"</li>
+                <li>"Vocês fazem entrega?"</li>
+                <li>"Quero comprar um kit presente"</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+
+        async function enviarMensagem() {
+            const input = document.getElementById('inputMensagem');
+            const mensagem = input.value.trim();
+
+            if (!mensagem) return;
+
+            // Adiciona mensagem do usuário
+            adicionarMensagem(mensagem, 'usuario');
+            input.value = '';
+
+            // Mostra indicador de digitação
+            mostrarDigitando();
+
+            try {
+                const response = await fetch(`${API_URL}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ texto: mensagem })
+                });
+
+                const data = await response.json();
+
+                // Remove indicador de digitação
+                removerDigitando();
+
+                // Adiciona resposta do agente
+                adicionarMensagem(data.resposta, 'agente');
+
+            } catch (error) {
+                removerDigitando();
+                adicionarMensagem('Desculpe, houve um erro ao processar sua mensagem 😅', 'agente');
+                console.error('Erro:', error);
+            }
+        }
+
+        function adicionarMensagem(texto, tipo) {
+            const chatContainer = document.getElementById('chatContainer');
+            const mensagemDiv = document.createElement('div');
+            mensagemDiv.className = `mensagem ${tipo}`;
+
+            const avatar = tipo === 'agente' ? '🤖' : '👤';
+
+            mensagemDiv.innerHTML = `
+                <div class="avatar">${avatar}</div>
+                <div class="texto">${texto}</div>
+            `;
+
+            chatContainer.appendChild(mensagemDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function mostrarDigitando() {
+            const chatContainer = document.getElementById('chatContainer');
+            const digitandoDiv = document.createElement('div');
+            digitandoDiv.className = 'mensagem agente digitando';
+            digitandoDiv.id = 'digitando';
+            digitandoDiv.innerHTML = `
+                <div class="avatar">🤖</div>
+                <div class="texto">
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                </div>
+            `;
+            chatContainer.appendChild(digitandoDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function removerDigitando() {
+            const digitando = document.getElementById('digitando');
+            if (digitando) digitando.remove();
+        }
+
+        async function resetarConversa() {
+            try {
+                await fetch(`${API_URL}/resetar`, { method: 'POST' });
+                document.getElementById('chatContainer').innerHTML = `
+                    <div class="mensagem agente">
+                        <div class="avatar">🤖</div>
+                        <div class="texto">
+                            Olá! 👋 Sou a assistente virtual da Boutique Goods!<br>
+                            Como posso te ajudar hoje? 😊
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Erro ao resetar:', error);
+            }
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                enviarMensagem();
+            }
+        }
+    </script>
+</body>
+</html>
